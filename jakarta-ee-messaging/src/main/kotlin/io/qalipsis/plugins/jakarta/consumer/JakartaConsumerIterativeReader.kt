@@ -20,8 +20,16 @@ import io.qalipsis.api.context.StepName
 import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
-import jakarta.jms.*
+import jakarta.jms.Destination
+import jakarta.jms.Message
+import jakarta.jms.MessageConsumer
+import jakarta.jms.MessageListener
+import jakarta.jms.Queue
+import jakarta.jms.QueueConnection
+import jakarta.jms.Session
 import jakarta.jms.Session.AUTO_ACKNOWLEDGE
+import jakarta.jms.Topic
+import jakarta.jms.TopicConnection
 import kotlinx.coroutines.channels.Channel
 
 /**

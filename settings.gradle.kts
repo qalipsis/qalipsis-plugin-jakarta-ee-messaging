@@ -17,6 +17,6 @@
 rootProject.name = "qalipsis-plugins-jakarta"
 
 include(
-    "jakarta"
+    "jakarta-ee-messaging"
 )
 

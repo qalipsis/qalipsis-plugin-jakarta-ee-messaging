@@ -21,7 +21,6 @@ import assertk.assertThat
 import assertk.assertions.*
 import io.aerisconsulting.catadioptre.getProperty
 import io.qalipsis.api.context.StepContext
-import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.DummyStepSpecification
 import io.qalipsis.plugins.jakarta.Constants
 import io.qalipsis.plugins.jakarta.jakarta
