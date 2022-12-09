@@ -14,7 +14,7 @@
  * permissions and limitations under the License.
  */
 
-rootProject.name = "qalipsis-plugins-jakarta"
+rootProject.name = "qalipsis-plugins-jakarta-ee-messaging"
 
 include(
     "jakarta-ee-messaging"
