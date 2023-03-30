@@ -17,6 +17,8 @@
 rootProject.name = "qalipsis-plugins-jakarta-ee-messaging"
 
 include(
-    "jakarta-ee-messaging"
+    "qalipsis-plugin-jakarta-ee-messaging"
 )
+
+project(":qalipsis-plugin-jakarta-ee-messaging").projectDir = File(rootDir, "jakarta-ee-messaging")
 
