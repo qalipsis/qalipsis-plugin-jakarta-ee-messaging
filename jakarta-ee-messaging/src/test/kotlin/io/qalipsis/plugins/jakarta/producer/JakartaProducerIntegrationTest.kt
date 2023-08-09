@@ -21,14 +21,14 @@ import assertk.assertThat
 import assertk.assertions.isEqualTo
 import assertk.assertions.isInstanceOf
 import assertk.assertions.prop
-import io.micrometer.core.instrument.Counter
-import io.micrometer.core.instrument.Tags
 import io.mockk.confirmVerified
 import io.mockk.every
 import io.mockk.impl.annotations.RelaxedMockK
 import io.mockk.verify
+import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.events.EventsLogger
 import io.qalipsis.api.meters.CampaignMeterRegistry
+import io.qalipsis.api.meters.Counter
 import io.qalipsis.plugins.jakarta.Constants
 import io.qalipsis.test.coroutines.TestDispatcherProvider
 import io.qalipsis.test.mockk.WithMockk
@@ -104,11 +104,15 @@ internal class JakartaProducerIntegrationTest {
         // given
         val tags: Map<String, String> = emptyMap()
         val eventsLogger = relaxedMockk<EventsLogger>()
-        val metersTags = relaxedMockk<Tags>()
+        val context = relaxedMockk<StepStartStopContext> {
+            every { tags } returns tags
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
+        }
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("jakarta-produce-producing-records", refEq(metersTags)) } returns recordsToProduceCounter
-            every { counter("jakarta-produce-produced-value-bytes", refEq(metersTags)) } returns bytesCounter
-            every { counter("jakarta-produce-produced-records", refEq(metersTags)) } returns producedRecordsCounter
+            every { counter(context.scenarioName, context.stepName, "jakarta-produce-producing-records", refEq(tags)) } returns recordsToProduceCounter
+            every { counter(context.scenarioName, context.stepName, "jakarta-produce-produced-value-bytes", refEq(tags)) } returns bytesCounter
+            every { counter(context.scenarioName, context.stepName, "jakarta-produce-produced-records", refEq(tags)) } returns producedRecordsCounter
         }
         val produceClient = JakartaProducer(
             connectionFactory = { connectionFactory.createConnection() },
@@ -117,7 +121,7 @@ internal class JakartaProducerIntegrationTest {
             meterRegistry
         )
 
-        produceClient.start(metersTags)
+        produceClient.start(context)
 
         // when
         val result = produceClient.execute(
