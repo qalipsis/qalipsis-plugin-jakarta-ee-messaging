@@ -31,7 +31,7 @@ internal object JakartaScenario {
 
     internal lateinit var queueConnection : QueueConnection
 
-    internal const val minions = 2
+    private const val minions = 2
 
     internal val receivedMessages = LinkedBlockingDeque<String>(10)
 

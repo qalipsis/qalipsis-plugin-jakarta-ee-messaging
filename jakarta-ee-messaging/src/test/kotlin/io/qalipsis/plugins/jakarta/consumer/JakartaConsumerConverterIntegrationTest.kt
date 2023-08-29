@@ -62,10 +62,6 @@ import kotlin.math.pow
 @Testcontainers
 internal class JakartaConsumerConverterIntegrationTest {
 
-    @JvmField
-    @RegisterExtension
-    val testDispatcherProvider = TestDispatcherProvider()
-
     private val valueDeserializer: JakartaDeserializer<String> = relaxedMockk {
         every { deserialize(any()) } answers { firstArg<TextMessage>().text }
     }
@@ -314,5 +310,9 @@ internal class JakartaConsumerConverterIntegrationTest {
             withEnv(Constants.CONTAINER_USER_NAME_ENV_KEY, Constants.CONTAINER_USER_NAME)
             withEnv(Constants.CONTAINER_PASSWORD_ENV_KEY, Constants.CONTAINER_PASSWORD)
         }
+
+        @JvmField
+        @RegisterExtension
+        val testDispatcherProvider = TestDispatcherProvider()
     }
 }
