@@ -262,8 +262,6 @@ internal open class JakartaProducer(
             }
         }
         threads.clear()
-
-        connection.close()
         meterRegistry?.apply {
             recordsToProduce = null
             producedBytesCounter = null
@@ -272,7 +270,9 @@ internal open class JakartaProducer(
         }
         running = false
         recordsToSend.clear()
+
         connection.stop()
+        connection.close()
     }
 
     private data class SendingContext(

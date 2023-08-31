@@ -29,7 +29,7 @@ import kotlinx.coroutines.channels.Channel
 internal class JakartaChannelForwarder(private val channel: Channel<Message>) : MessageListener {
 
     override fun onMessage(message: Message) {
-        log.trace { "Received message from ${message.jmsDestination}" }
+        log.debug { "Received message from ${message.jmsDestination}" }
         channel.trySend(message).getOrThrow()
     }
 

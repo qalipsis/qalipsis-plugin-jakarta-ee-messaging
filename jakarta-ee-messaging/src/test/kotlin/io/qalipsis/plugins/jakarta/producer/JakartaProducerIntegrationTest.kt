@@ -68,6 +68,9 @@ internal class JakartaProducerIntegrationTest {
     @RelaxedMockK
     private lateinit var recordsToProduceCounter: Counter
 
+    @RelaxedMockK
+    private lateinit var errorsCounter: Counter
+
     private lateinit var connectionFactory: ActiveMQConnectionFactory
 
     private lateinit var consumerConnection: Connection
@@ -87,13 +90,13 @@ internal class JakartaProducerIntegrationTest {
     fun setUp() {
         consumerConnection = connectionFactory.createConnection()
         consumerConnection.start()
-
         consumerSession = consumerConnection.createSession(false, Session.AUTO_ACKNOWLEDGE)
     }
 
     @AfterEach
     fun stop(){
-        consumerConnection.stop()
+        consumerSession.close()
+        consumerConnection.close()
     }
 
     @Timeout(10)
@@ -111,6 +114,7 @@ internal class JakartaProducerIntegrationTest {
             every { counter("scenario-name", "step-name","jakarta-produce-producing-records", refEq(tags)) } returns recordsToProduceCounter
             every { counter("scenario-name", "step-name", "jakarta-produce-produced-value-bytes", refEq(tags)) } returns bytesCounter
             every { counter("scenario-name", "step-name","jakarta-produce-produced-records", refEq(tags)) } returns producedRecordsCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-errors", refEq(tags)) } returns errorsCounter
             every { recordsToProduceCounter.report(any()) } returns recordsToProduceCounter
             every { bytesCounter.report(any()) } returns bytesCounter
             every { producedRecordsCounter.report(any()) } returns producedRecordsCounter
@@ -169,7 +173,7 @@ internal class JakartaProducerIntegrationTest {
             eventsLogger.info("jakarta.produce.produced.records", 2, any(), tags = refEq(tags))
             eventsLogger.info("jakarta.produce.produced.bytes", 26, any(), tags = refEq(tags))
         }
-        confirmVerified(bytesCounter, recordsToProduceCounter, producedRecordsCounter, eventsLogger)
+        confirmVerified(bytesCounter, recordsToProduceCounter, producedRecordsCounter, errorsCounter, eventsLogger)
 
         // when
         val queueConsumer = consumerSession.createConsumer(consumerSession.createQueue("queue-1"))
@@ -195,14 +199,22 @@ internal class JakartaProducerIntegrationTest {
     @Test
     internal fun `should produce all the data to topic`(): Unit = testDispatcherProvider.run {
         // given
-        val topicConsumer = consumerSession.createConsumer(consumerSession.createTopic("topic-1"))
         val tags: Map<String, String> = emptyMap()
+        val topicConsumer = consumerSession.createConsumer(consumerSession.createTopic("topic-1"))
         val eventsLogger = relaxedMockk<EventsLogger>()
-        val metersTags = relaxedMockk<Tags>()
+        val startStopContext = relaxedMockk<StepStartStopContext> {
+            every { toEventTags() } returns emptyMap()
+            every { scenarioName } returns "scenario-name"
+            every { stepName } returns "step-name"
+        }
         val meterRegistry = relaxedMockk<CampaignMeterRegistry> {
-            every { counter("jakarta-produce-producing-records", refEq(metersTags)) } returns recordsToProduceCounter
-            every { counter("jakarta-produce-produced-value-bytes", refEq(metersTags)) } returns bytesCounter
-            every { counter("jakarta-produce-produced-records", refEq(metersTags)) } returns producedRecordsCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-producing-records", refEq(tags)) } returns recordsToProduceCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-value-bytes", refEq(tags)) } returns bytesCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-records", refEq(tags)) } returns producedRecordsCounter
+            every { counter("scenario-name", "step-name","jakarta-produce-produced-errors", refEq(tags)) } returns errorsCounter
+            every { recordsToProduceCounter.report(any()) } returns recordsToProduceCounter
+            every { bytesCounter.report(any()) } returns bytesCounter
+            every { producedRecordsCounter.report(any()) } returns producedRecordsCounter
         }
 
         val connection = connectionFactory.createConnection()
@@ -217,7 +229,7 @@ internal class JakartaProducerIntegrationTest {
             meterRegistry
         )
 
-        produceClient.start(metersTags)
+        produceClient.start(startStopContext)
 
         excludeRecords {
             eventsLogger.toString()
@@ -251,12 +263,14 @@ internal class JakartaProducerIntegrationTest {
             recordsToProduceCounter.increment(2.0)
             producedRecordsCounter.increment(2.0)
             bytesCounter.increment(26.0)
-
+            bytesCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            recordsToProduceCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
+            producedRecordsCounter.report(any<Meter.ReportingConfiguration<Counter>.() -> Unit>())
             eventsLogger.debug("jakarta.produce.producing.records", 2, any(), tags = refEq(tags))
             eventsLogger.info("jakarta.produce.produced.records", 2, any(), tags = refEq(tags))
             eventsLogger.info("jakarta.produce.produced.bytes", 26, any(), tags = refEq(tags))
         }
-        confirmVerified(bytesCounter, recordsToProduceCounter, producedRecordsCounter, eventsLogger)
+        confirmVerified(bytesCounter, recordsToProduceCounter, producedRecordsCounter, errorsCounter, eventsLogger)
 
         // when
         val message1 = topicConsumer.receive()

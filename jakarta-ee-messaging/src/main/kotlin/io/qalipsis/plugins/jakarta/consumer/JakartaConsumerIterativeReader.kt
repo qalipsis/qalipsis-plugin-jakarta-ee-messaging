@@ -21,8 +21,12 @@ import io.qalipsis.api.context.StepStartStopContext
 import io.qalipsis.api.lang.tryAndLogOrNull
 import io.qalipsis.api.logging.LoggerHelper.logger
 import io.qalipsis.api.steps.datasource.DatasourceIterativeReader
-import jakarta.jms.*
+import jakarta.jms.Connection
+import jakarta.jms.Message
+import jakarta.jms.QueueConnection
+import jakarta.jms.Session
 import jakarta.jms.Session.AUTO_ACKNOWLEDGE
+import jakarta.jms.TopicConnection
 import kotlinx.coroutines.channels.Channel
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CountDownLatch
@@ -46,15 +50,14 @@ internal class JakartaConsumerIterativeReader(
 
     private var running = false
 
-    private var consumerLatch = CountDownLatch(1)
+    private lateinit var consumerLatch: CountDownLatch
 
     private lateinit var consumersOwningThread: Thread
 
     override fun start(context: StepStartStopContext) {
-        consumerLatch.countDown()
+        consumerLatch = CountDownLatch(1)
 
         channel = Channel(Channel.UNLIMITED)
-        consumerLatch = CountDownLatch(1)
         running = true
         // This future aims at waiting for the consumers to be up and running.
         val creationCompletionFuture = CompletableFuture<Result<Unit>>()
@@ -96,10 +99,11 @@ internal class JakartaConsumerIterativeReader(
                     val session = connection.createSession(false, AUTO_ACKNOWLEDGE)
                     topics.forEach { topicName ->
                         log.debug { "Creating a consumer for the topic $topicName" }
-                        session.createConsumer(session.createTopic(topicName)).also {
+                        session.createDurableConsumer(session.createTopic(topicName), "${connection.clientID}_$topicName").also {
                             it.messageListener = messageListener
                         }
                     }
+                    connection.start()
                 }
 
                 if (queues.isNotEmpty()) {
@@ -113,6 +117,7 @@ internal class JakartaConsumerIterativeReader(
                             it.messageListener = messageListener
                         }
                     }
+                    connection.start()
                 }
                 creationCompletionFuture.complete(Result.success(Unit))
 
@@ -127,6 +132,7 @@ internal class JakartaConsumerIterativeReader(
                     creationCompletionFuture.complete(Result.failure(e))
                 }
             } finally {
+                log.debug { "Closing the connections" }
                 connections.forEach {
                     tryAndLogOrNull(log) {
                         // Closing the connections will close all the attached sessions and consumers.
@@ -138,7 +144,7 @@ internal class JakartaConsumerIterativeReader(
     }
 
     override fun stop(context: StepStartStopContext) {
-        log.debug { "Stopping the JMS consumer for step $stepId" }
+        log.debug { "Stopping the Jakarta consumer for step $stepId" }
         running = false
         consumerLatch.countDown()
         kotlin.runCatching {
@@ -150,7 +156,7 @@ internal class JakartaConsumerIterativeReader(
         // Releases the resources.
         channel?.cancel()
         channel = null
-        log.debug { "JMS consumer for step $stepId was stopped" }
+        log.debug { "Jakarta consumer for step $stepId was stopped" }
     }
 
     override suspend fun hasNext(): Boolean {

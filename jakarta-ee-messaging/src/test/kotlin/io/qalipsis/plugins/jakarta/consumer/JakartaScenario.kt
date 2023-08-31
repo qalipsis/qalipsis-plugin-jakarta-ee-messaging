@@ -19,7 +19,11 @@ package io.qalipsis.plugins.jakarta.consumer
 import io.qalipsis.api.annotations.Scenario
 import io.qalipsis.api.executionprofile.regular
 import io.qalipsis.api.scenario.scenario
-import io.qalipsis.api.steps.*
+import io.qalipsis.api.steps.blackHole
+import io.qalipsis.api.steps.filterNotNull
+import io.qalipsis.api.steps.innerJoin
+import io.qalipsis.api.steps.map
+import io.qalipsis.api.steps.onEach
 import io.qalipsis.plugins.jakarta.deserializer.JakartaJsonDeserializer
 import io.qalipsis.plugins.jakarta.deserializer.JakartaStringDeserializer
 import io.qalipsis.plugins.jakarta.jakarta
